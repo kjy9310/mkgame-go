@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 	b64 "encoding/base64"
 	"strings"
 	"encoding/json"
+	"mkgame-go/mysql"
 )
 
 type responseSimple struct {
@@ -19,11 +20,11 @@ func login (w http.ResponseWriter, req *http.Request) []byte {
 	account := req.FormValue("account")
 	fmt.Println(account)
 	
-	DBhandler := initDB()
+	DBhandler := mysql.Con
 	var args []interface{}
 	args = append(args, account)
-	success, resRow := DBhandler.selectRow("SELECT password FROM users where account = ?", args,1)
-	DBhandler.closeDB()
+	success, resRow := DBhandler.SelectRow("SELECT password FROM users where account = ?", args,1)
+	// DBhandler.CloseDB()
 	if success == false {
 		json, err := json.Marshal(response)
 		if err != nil {

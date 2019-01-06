@@ -1,17 +1,24 @@
-package main
+package web
 
 import (
 	"io/ioutil"
 	"path/filepath"
 	"net/http"
 	"strings"
-	//"fmt"
+	"mkgame-go/controller"
+	"mkgame-go/mysql"
+	"log"
 )
 
-func main() {
-	
-	http.Handle("/", new(httpHandler))
-	http.ListenAndServe(":5000", nil)
+func ServerOn() {
+	log.Println("server on start")
+	go controller.ChatHub.Run()
+	http.Handle("/", http.FileServer(http.Dir("./web/public")))
+	http.HandleFunc("/ws", controller.ServeWs)
+	// http.Handle("/", new(httpHandler))
+	log.Fatal(http.ListenAndServe(":8080", nil))
+	// http.ListenAndServe(":5000", nil)
+	log.Println("server on!")
 }
 
 type httpHandler struct {
@@ -23,14 +30,14 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	localPath := htmlPath + req.URL.Path
 	if req.URL.Path == "/mksql" {
 		w.Header().Add("Content-Type", "text/plain")
-		DBhandler := initDB()
+		DBhandler := mysql.Con
 		var args []interface{}
 		args = append(args, "2")
-		success, resRow := DBhandler.selectRow("SELECT name, email FROM users where id = 1", nil,2)
+		success, resRow := DBhandler.SelectRow("SELECT name, email FROM users where id = 1", nil,2)
 		if success == false {
 			w.Write([]byte("something is wrong"))
 		}
-		DBhandler.closeDB()		
+		// DBhandler.CloseDB()		
 		w.Write([]byte(resRow[0]))
 		return
 	}

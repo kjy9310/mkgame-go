@@ -1,23 +1,23 @@
-package main
+package mysql
 
 import (
 	"database/sql"
 	"log"
-	//"fmt"
+
 	_ "github.com/go-sql-driver/mysql"
 )
-type HelloHandler struct {
+type DbHandler struct {
 	db *sql.DB
 }
-func initDB() HelloHandler {
-// sql.DB 객체 생성
+var Con DbHandler
+func init() {
 	db, err := sql.Open("mysql", "root:12726@tcp(127.0.0.1:3306)/game_card")
 	if err != nil {
 		log.Fatal(err)
 	}
-	return (HelloHandler{db: db})
+	Con = (DbHandler{db: db})
 }
-func (h *HelloHandler) selectList(sql string, args []interface{}) (bool, []map[string]string) {
+func (h *DbHandler) SelectList(sql string, args []interface{}) (bool, []map[string]string) {
 	var resultMap []map[string]string
 	rows, _ := h.db.Query(sql,args)
 	columns, _ := rows.Columns()
@@ -49,7 +49,7 @@ func (h *HelloHandler) selectList(sql string, args []interface{}) (bool, []map[s
     }
 	return true, resultMap
 }
-func (h *HelloHandler) selectRow(sql string, args []interface{}, count int) (bool, []string) {
+func (h *DbHandler) SelectRow(sql string, args []interface{}, count int) (bool, []string) {
 	stringValues := make([]string,count)
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
@@ -73,7 +73,7 @@ func (h *HelloHandler) selectRow(sql string, args []interface{}, count int) (boo
     }
 	return true, stringValues
 }
-func (h *HelloHandler) closeDB() {
+func (h *DbHandler) CloseDB() {
 	defer h.db.Close()
 }
 
