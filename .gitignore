@@ -13,3 +13,11 @@
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 vendor/
+
+#npm
+node_modules
+node_modules/*
+
+.idea
+.DS_Store
+.env

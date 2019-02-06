@@ -1,0 +1,30 @@
+{
+  "name": "mkgame-go",
+  "version": "1.0.0",
+  "description": "1. golang dep installed\r     https://github.com/golang/dep",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "uglify": "uglifyjs scripts/* -o web/public/js/avhub-player.min.js",
+    "webpack": "./node_modules/webpack/bin/webpack.js scripts/* -o web/public/js/bundle.js",
+    "watch": "./node_modules/webpack/bin/webpack.js --watch --progress --mode development --config=./webpack.config.js scripts/* -o web/public/js/mkgame-go.min.js",
+    "production": "./node_modules/webpack/bin/webpack.js --progress --mode production scripts/* -o web/public/js/mkgame-go.min.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjy9310/mkgame-go.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kjy9310/mkgame-go/issues"
+  },
+  "homepage": "https://github.com/kjy9310/mkgame-go#readme",
+  "dependencies": {
+    "uglifyjs-webpack-plugin": "^2.1.1",
+    "webpack": "^4.29.1"
+  },
+  "devDependencies": {
+    "webpack-cli": "^3.2.3"
+  }
+}
