@@ -2,20 +2,20 @@ package web
 
 import (
 	"io/ioutil"
-	"path/filepath"
-	"net/http"
-	"strings"
+	"log"
 	"mkgame-go/controller"
 	"mkgame-go/mysql"
-	"log"
+	"net/http"
+	"path/filepath"
+	"strings"
 )
 
 func ServerOn() {
 	log.Println("server on start")
 	go controller.ChatHub.Run()
-	http.Handle("/", http.FileServer(http.Dir("./web/public")))
+	// http.Handle("/", http.FileServer(http.Dir("./web/public")))
 	http.HandleFunc("/ws", controller.ServeWs)
-	// http.Handle("/", new(httpHandler))
+	http.Handle("/", new(httpHandler))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 	// http.ListenAndServe(":5000", nil)
 	log.Println("server on!")
@@ -26,38 +26,45 @@ type httpHandler struct {
 }
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	htmlPath := "/var/www/html"
-	localPath := htmlPath + req.URL.Path
+	staticPath := "./web/public"
+	localPath := staticPath + req.URL.Path
+	log.Println(localPath)
 	if req.URL.Path == "/mksql" {
 		w.Header().Add("Content-Type", "text/plain")
 		DBhandler := mysql.Con
 		var args []interface{}
 		args = append(args, "2")
-		success, resRow := DBhandler.SelectRow("SELECT name, email FROM users where id = 1", nil,2)
+		success, resRow := DBhandler.SelectRow("SELECT name, email FROM users where id = 1", nil, 2)
 		if success == false {
 			w.Write([]byte("something is wrong"))
 		}
-		// DBhandler.CloseDB()		
+		// DBhandler.CloseDB()
 		w.Write([]byte(resRow[0]))
 		return
 	}
-	if req.URL.Path=="/api/login"{
+	if req.URL.Path == "/api/login" {
 		responseJson := login(w, req)
 		w.Write(responseJson)
 		return
-	}else if req.URL.Path=="/api/logout" {
+	} else if req.URL.Path == "/api/logout" {
 		responseJson := logout(w, req)
 		w.Write(responseJson)
 		return
-	}else if strings.Contains(req.URL.Path,"/api/"){
+	} else if strings.Contains(req.URL.Path, "/api/") {
 		success, account := loginCheck(w, req)
 		if success {
-			w.Write([]byte(account+" login check ok"))
+			w.Write([]byte(account + " login check ok"))
 		}
 		return
 	}
 	content, err := ioutil.ReadFile(localPath)
 	if err != nil {
+		localPath = localPath + "/index.html"
+		log.Println(err)
+		content, err = ioutil.ReadFile(localPath)
+	}
+	if err != nil {
+		log.Println(err)
 		w.WriteHeader(404)
 		w.Write([]byte(http.StatusText(404)))
 		return
