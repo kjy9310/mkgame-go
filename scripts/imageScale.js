@@ -7,10 +7,14 @@ document.getElementById('test').onchange = function (evt) {
     // FileReader support
     if (FileReader && files && files.length) {
         var fr = new FileReader();
-        fr.onload = async function () {
+        fr.onload = function () {
             console.log(fr.result.length)
-            size25 = await resizeBase64Img(fr.result,25,25);
-            console.log(size25)
+            resizeBase64Img(fr.result,2500,2500).then(function (val){
+                var img = document.createElement('img')
+                img.src=val
+                document.body.appendChild(img);
+
+            })
         }
         fr.readAsDataURL(files[0]);
     }
@@ -21,19 +25,22 @@ document.getElementById('test').onchange = function (evt) {
         // them on the server until the user's session ends.
     }
 }
- function resizeBase64Img(file, width, height) {
+async function resizeBase64Img(file, width, height) {
     var canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     var img = document.createElement('img');
     img.src = file;
-    return new Promise(function (resolve){
+    
+    var x = await new Promise (function (resolve){
         img.onload = function(){
             var self = this;
             var context = canvas.getContext("2d");
             context.scale(width/self.width, height/self.height);
             context.drawImage(self, 0, 0);
             resolve(canvas.toDataURL());
-        }    
-    });
+        }   
+    } );
+    // console.log(x);
+    return x;
 }
