@@ -1,7 +1,7 @@
-document.write('<input type="file" id="test"/>')
+document.write('<input type="file" id="test"/><button onclick="Fclick()">image</button>')
 
-document.getElementById('test').onchange = function (evt) {
-    var tgt = evt.target || window.event.srcElement,
+function Fclick() {
+    var tgt = document.getElementById('test'),
         files = tgt.files;
 
     // FileReader support
@@ -9,7 +9,7 @@ document.getElementById('test').onchange = function (evt) {
         var fr = new FileReader();
         fr.onload = function () {
             console.log(fr.result.length)
-            resizeBase64Img(fr.result,2500,2500).then(function (val){
+            resizeBase64Img(fr.result,250,250).then(function (val){
                 var img = document.createElement('img')
                 img.src=val
                 document.body.appendChild(img);
@@ -21,22 +21,32 @@ document.getElementById('test').onchange = function (evt) {
 
     // Not supported
     else {
-        // fallback -- perhaps submit the input to an iframe and temporarily store
-        // them on the server until the user's session ends.
+        alert("unsupported browser!! :S");
     }
 }
 async function resizeBase64Img(file, width, height) {
     var canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
     var img = document.createElement('img');
     img.src = file;
-    
     var x = await new Promise (function (resolve){
         img.onload = function(){
             var self = this;
             var context = canvas.getContext("2d");
-            context.scale(width/self.width, height/self.height);
+            var w_ratio = width/self.width
+            var h_ratio = height/self.height
+            if (width==0){
+                canvas.width = img.width*h_ratio;
+                w_ratio = h_ratio
+            }else{
+                canvas.width = width
+            }
+            if (height==0){
+                canvas.height = img.height*w_ratio;
+                h_ratio = w_ratio
+            }else{
+                canvas.height = height
+            }
+            context.scale(w_ratio, h_ratio);
             context.drawImage(self, 0, 0);
             resolve(canvas.toDataURL());
         }   
