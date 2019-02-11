@@ -7,14 +7,12 @@ function Fclick() {
     // FileReader support
     if (FileReader && files && files.length) {
         var fr = new FileReader();
-        fr.onload = function () {
+        fr.onload = async function () {
             console.log(fr.result.length)
-            resizeBase64Img(fr.result,250,250).then(function (val){
-                var img = document.createElement('img')
-                img.src=val
-                document.body.appendChild(img);
-
-            })
+            const a = await resizeBase64Img(fr.result,250,250);
+            var img = document.createElement('img')
+            img.src=a;
+            document.body.appendChild(img);
         }
         fr.readAsDataURL(files[0]);
     }
@@ -34,11 +32,11 @@ async function resizeBase64Img(file, width, height) {
             var context = canvas.getContext("2d");
             var w_ratio = width/self.width
             var h_ratio = height/self.height
-            if (width==0){
+            if (width===0){
                 canvas.width = img.width*h_ratio;
-                w_ratio = h_ratio
+                w_ratio = h_ratio;
             }else{
-                canvas.width = width
+                canvas.width = width;
             }
             if (height==0){
                 canvas.height = img.height*w_ratio;
