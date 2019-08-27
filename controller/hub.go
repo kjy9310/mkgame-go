@@ -1,20 +1,39 @@
 package controller
 
-var ChatHub = Hub{
-	Broadcast:   make(chan string),
+import (
+//	"time"
+//	"encoding/json"
+//	"log"
+//	"strconv"
+)
+
+var AHub = Hub{
+	Receive:   make(chan string),
 	Register:    make(chan *Client),
 	Unregister:  make(chan *Client),
-	Clients: 	 make(map[*Client]bool),
-	content:  	 "",
+	Clients:	 make(map[*Client]bool),
+	Inputqueues:	make(map[string][]QueDatum),
+	content:	 "",
 }
 
 type Hub struct {
 	Clients map[*Client]bool
-	Broadcast chan string
+	Receive chan string
 	Register chan *Client
 	Unregister chan *Client
-
+	Inputqueues map[string][]QueDatum
 	content string
+}
+
+type QueDatum struct {
+	Time int
+	Action string
+}
+
+type wsRequest struct {
+	ActionType string	`json:"actionType"`
+	Value string		`json:"value"`
+	Time int		`json:"time"`
 }
 
 func (h *Hub) Run() {
@@ -33,8 +52,8 @@ func (h *Hub) Run() {
 			}
 			break
 
-		case m := <-h.Broadcast:
-			h.content = m
+		case m := <-h.Receive:
+			h.content = string(m)
 			h.broadcastMessage()
 			break
 		}

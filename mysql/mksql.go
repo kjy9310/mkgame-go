@@ -11,7 +11,12 @@ type DbHandler struct {
 }
 var Con DbHandler
 func init() {
-	db, err := sql.Open("mysql", "root:12726@tcp(127.0.0.1:3306)/game_card")
+	user:="root"
+	password:=""
+	address:="localhost"
+	port:="3306"
+	schema:="game"
+	db, err := sql.Open("mysql", user+":"+password+"@tcp("+address+":"+port+")/"+schema)
 	if err != nil {
 		log.Fatal(err)
 	}

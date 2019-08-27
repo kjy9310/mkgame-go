@@ -12,7 +12,7 @@ import (
 
 func ServerOn() {
 	log.Println("server on start")
-	go controller.ChatHub.Run()
+	go controller.AHub.Run()
 	// http.Handle("/", http.FileServer(http.Dir("./web/public")))
 	http.HandleFunc("/ws", controller.ServeWs)
 	http.Handle("/", new(httpHandler))

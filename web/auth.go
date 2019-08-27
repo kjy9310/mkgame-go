@@ -19,7 +19,6 @@ func login (w http.ResponseWriter, req *http.Request) []byte {
 	response := (responseSimple{Success:false})
 	account := req.FormValue("account")
 	fmt.Println(account)
-	
 	DBhandler := mysql.Con
 	var args []interface{}
 	args = append(args, account)

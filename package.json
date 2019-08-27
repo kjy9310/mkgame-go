@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "uglify": "uglifyjs scripts/* -o web/public/js/avhub-player.min.js",
     "webpack": "./node_modules/webpack/bin/webpack.js scripts/* -o web/public/js/bundle.js",
     "watch": "./node_modules/webpack/bin/webpack.js --watch --progress --mode development --config=./webpack.config.js scripts/* -o web/public/js/mkgame-go.min.js",
     "production": "./node_modules/webpack/bin/webpack.js --progress --mode production scripts/* -o web/public/js/mkgame-go.min.js"

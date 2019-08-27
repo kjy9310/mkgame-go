@@ -5,6 +5,8 @@ import (
 	"log"
 	"github.com/gorilla/websocket"
 	"time"
+	"encoding/json"
+	"sync"
 )
 
 const (
@@ -17,6 +19,7 @@ const (
 type Client struct {
 	ws *websocket.Conn
 	send chan []byte
+	mu	sync.Mutex
 }
 
 var upgrader = websocket.Upgrader{
@@ -41,7 +44,7 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 		ws: ws,
 	}
 
-	ChatHub.Register <- c
+	AHub.Register <- c
 
 	go c.writePump()
 	c.readPump()
@@ -50,7 +53,7 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 
 func (c *Client) readPump() {
 	defer func() {
-		ChatHub.Unregister <- c
+		AHub.Unregister <- c
 		c.ws.Close()
 	}()
 
@@ -66,8 +69,29 @@ func (c *Client) readPump() {
 		if err != nil {
 			break
 		}
-
-		ChatHub.Broadcast <- string(message)
+		var newRequest wsRequest
+		err = json.Unmarshal(message, &newRequest)
+		if err != nil {
+			break
+		}
+		log.Println("request obj : ", newRequest)
+		if newRequest.ActionType == "ping" {
+			newInput := QueDatum{
+				Action : "pong",
+				Time : int(time.Now().UnixNano() / int64(time.Millisecond)),
+			}
+			b, err := json.Marshal(newInput)
+			if err != nil {
+			        log.Println(err)
+				break
+			}
+			if err := c.write(websocket.TextMessage, b); err != nil {
+				break
+			}
+		} else {
+			log.Println(string(message))
+			AHub.Receive <- string(message)
+		}
 	}
 }
 
@@ -98,6 +122,8 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) write(mt int, message []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.ws.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.ws.WriteMessage(mt, message)
 }
