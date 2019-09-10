@@ -20,6 +20,8 @@ type Client struct {
 	ws *websocket.Conn
 	send chan []byte
 	mu	sync.Mutex
+	location	string
+	User Object
 }
 
 var upgrader = websocket.Upgrader{
@@ -43,7 +45,7 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 		send: make(chan []byte, maxMessageSize),
 		ws: ws,
 	}
-
+	c.User.Uuid = "thisIsUuid"
 	AHub.Register <- c
 
 	go c.writePump()
@@ -74,9 +76,10 @@ func (c *Client) readPump() {
 		if err != nil {
 			break
 		}
+		newRequest.Uuid = c.User.Uuid
 		log.Println("request obj : ", newRequest)
 		if newRequest.ActionType == "ping" {
-			newInput := QueDatum{
+			newInput := wsResponse{
 				Action : "pong",
 				Time : int(time.Now().UnixNano() / int64(time.Millisecond)),
 			}
@@ -90,14 +93,13 @@ func (c *Client) readPump() {
 			}
 		} else {
 			log.Println(string(message))
-			AHub.Receive <- string(message)
+			AHub.Receive <- newRequest
 		}
 	}
 }
 
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
-
 	defer func() {
 		ticker.Stop()
 		c.ws.Close()
