@@ -7,6 +7,7 @@ import (
 	"time"
 	"encoding/json"
 	"sync"
+	"github.com/google/uuid"
 )
 
 const (
@@ -45,7 +46,14 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 		send: make(chan []byte, maxMessageSize),
 		ws: ws,
 	}
-	c.User.Uuid = "thisIsUuid"
+	id, err := uuid.NewUUID()
+	if err !=nil {
+		log.Println("UUID creation failed", err)
+		return
+	}
+	c.User.Uuid = id.String()
+	// c.User.Speed = 1.0
+	c.User.Position = 500500
 	AHub.Register <- c
 
 	go c.writePump()

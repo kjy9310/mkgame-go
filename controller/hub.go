@@ -42,9 +42,9 @@ type wsResponse struct {
 }
 
 type wsRequest struct {
-	ActionType string	`json:"actionType"`
-	Value string		`json:"value"`
-	Time int		`json:"time"`
+	ActionType string		`json:"actionType"`
+	Value interface{}		`json:"value"`
+	Time int			`json:"time"`
 	Uuid string
 }
 
@@ -71,10 +71,10 @@ func (h *Hub) Run() {
 			break
 		case <- packet.C:
 			ticks++
+			h.Calculate(h.Inputqueues)
 			if (len(h.Inputqueues)<1){
 				break
 			}
-			h.Calculate(h.Inputqueues)
 			stringPackets, err := json.Marshal(h.Inputqueues)
 			if err != nil {
 			        log.Println(err)

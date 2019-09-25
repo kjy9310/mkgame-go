@@ -81,4 +81,22 @@ window.addEventListener("load", function(evt) {
 	};
 	ws.send(JSON.stringify(pingData));
     }
+
+    document.getElementById("left").onclick = function(evt) {
+        if (!ws) {
+            return false;
+        }
+        print("SEND: left");
+        var sendData = {
+		actionType:'move',
+		value:{
+			Direction:4.71,
+			Speed:1
+		},
+		time:((new Date()).getTime()-diffTime)
+	};
+	ws.send(JSON.stringify(sendData));
+        return false;
+    };
+
 });
