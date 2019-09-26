@@ -21,7 +21,7 @@ type Client struct {
 	ws *websocket.Conn
 	send chan []byte
 	mu	sync.Mutex
-	location	string
+	Map	string
 	User Object
 }
 
@@ -53,7 +53,8 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	}
 	c.User.Uuid = id.String()
 	// c.User.Speed = 1.0
-	c.User.Position = 500500
+	c.Map = "start"
+	c.User.Position = 5000500
 	AHub.Register <- c
 
 	go c.writePump()

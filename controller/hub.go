@@ -16,7 +16,7 @@ var AHub = Hub{
 	Inputqueues:	make([]wsResponse,0),
 	LastQueSent: 0,
 	Maps: make(map[string]Map),
-	Objects : make(map[string]map[string]Object),
+	Objects : make(map[string]map[int]*Object),
 }
 
 
@@ -31,7 +31,7 @@ type Hub struct {
 	LastQueSent int
 	serverStatus wsResponse
 	Maps	map[string]Map
-	Objects map[string]map[string]Object
+	Objects map[string]map[int]*Object
 }
 
 type wsResponse struct {
@@ -48,14 +48,22 @@ type wsRequest struct {
 	Uuid string
 }
 
+func (h *Hub) loadMaps(){
+	emptyObject := make(map[int]*Object)
+	h.Maps = map[string]Map{"start":Map{}}
+	h.Objects = map[string]map[int]*Object{"start":emptyObject}
+}
+
 func (h *Hub) Run() {
 	packet := time.NewTicker(packetPeriod)
 	ticks := 0
 	syncOnTicks := 10
+	h.loadMaps()
 	for {
 		select {
 		case c := <-h.Register:
 			h.Clients[c] = true
+			h.Objects[c.Map][c.User.Position]=&c.User
 			break
 
 		case c := <-h.Unregister:
@@ -72,6 +80,8 @@ func (h *Hub) Run() {
 		case <- packet.C:
 			ticks++
 			h.Calculate(h.Inputqueues)
+			h.LastQueSent = int(time.Now().UnixNano() / int64(time.Millisecond))
+
 			if (len(h.Inputqueues)<1){
 				break
 			}
@@ -81,7 +91,6 @@ func (h *Hub) Run() {
 				break
 			}
 			h.broadcastMessage(stringPackets)
-			h.LastQueSent = h.Inputqueues[len(h.Inputqueues)-1].Time
 			h.Inputqueues = []wsResponse{}
 			break
 
@@ -91,7 +100,7 @@ func (h *Hub) Run() {
 				h.serverStatus = wsResponse{
 					Action : "status",
 					Time : int(time.Now().UnixNano() / int64(time.Millisecond)),
-					Data : map[string]interface{}{"test":Object{}},
+					Data : map[string]interface{}{"Maps":h.Maps,"Objects":h.Objects},
 				}
 				stringStatus, err := json.Marshal(h.serverStatus)
 				if err != nil {
