@@ -68,6 +68,9 @@ func (h *Hub) Run() {
 
 		case c := <-h.Unregister:
 			_, ok := h.Clients[c]
+			if _,exist := h.Objects[c.Map][c.User.Position]; exist {
+				delete(h.Objects[c.Map],c.User.Position)
+			}
 			if ok {
 				delete(h.Clients, c)
 				close(c.send)

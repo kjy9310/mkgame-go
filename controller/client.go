@@ -113,7 +113,19 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		c.ws.Close()
 	}()
-
+	newInput := wsResponse{
+		Action : "login",
+		Data : map[string]string{"Uuid":c.User.Uuid},
+		Time : int(time.Now().UnixNano() / int64(time.Millisecond)),
+	}
+	b, err := json.Marshal(newInput)
+	if err != nil {
+	        log.Println(err)
+		return
+	}
+	if err := c.write(websocket.TextMessage, b); err != nil {
+		return
+	}
 	for {
 		select {
 		case message, ok := <-c.send:
