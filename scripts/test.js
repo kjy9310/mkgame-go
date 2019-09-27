@@ -8,21 +8,34 @@ window.addEventListener("load", function(evt) {
 	function setObjects(objs) {
 		Objects = objs;
 	}
+	function setObject(uuid, obj){
+		Objects[Objects.findIndex(function(element){return element.Uuid==uuid})]=obj;
+	}
+	function getObject(uuid){
+		return Objects.find(function(element){
+			return element.Uuid==uuid;
+		})
+	}
 	function drawCanvas(canvas) {
 		var ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		Objects.forEach(function(object){
+		for (var index in Objects){
+			var object = Objects[index];
 			var x = parseInt(object.Position/10000,10);
 			var y = object.Position-x*10000;
+			x+=Math.round(Math.sin(object.Direction)*object.Speed)
+			y+=Math.round(Math.cos(object.Direction)*object.Speed*-1)
 			if (object.Uuid == myUuid){
 				ctx.fillStyle="blue";
 			}
 			ctx.fillRect(x,y,10,10)
+			object.Position = x*10000+y;
+			Objects[index] = object
 			ctx.fillStyle="black";
-		});
+		}
 	}
 	
-	return {setObjects:setObjects, drawCanvas:drawCanvas}
+	return {setObject:setObject, getObject:getObject, setObjects:setObjects, drawCanvas:drawCanvas}
     };
     var simulation = canvasControl();
     var simulatingInterval
@@ -36,9 +49,9 @@ window.addEventListener("load", function(evt) {
     var diffTime = 0;
     var print = function(message) {
         var d = document.createElement("div");
-            d.innerHTML = message;
-            output.appendChild(d);
-        };
+        d.innerHTML = message;
+        output.appendChild(d);
+    };
    
      document.getElementById("open").onclick = function(evt) {
 	var hostAddress = document.getElementById("address").value;
@@ -46,7 +59,7 @@ window.addEventListener("load", function(evt) {
 	    return false;
 	}
 	ws = new WebSocket("ws://"+hostAddress+"/ws");
-	simulatingInterval = setInterval(function(){simulation.drawCanvas(canvas)},500);
+	simulatingInterval = setInterval(function(){simulation.drawCanvas(canvas)},100);
 
 	ws.onopen = function(evt) {
 	    print("OPEN");
@@ -69,6 +82,12 @@ window.addEventListener("load", function(evt) {
 		    break;
 		case 'status':
 		    simulation.setObjects(Object.values(jsonData.Data.Objects.start));
+		    break;
+		case 'move':
+		    var targetObj = simulation.getObject(jsonData.Uuid)
+		    targetObj.Speed = jsonData.Data.Speed;
+		    targetObj.Direction = jsonData.Data.Direction;
+		    simulation.setObject(jsonData.Uuid, targetObj);
 		    break;
 		case 'login':
 		    myUuid = jsonData.Data.Uuid;
@@ -180,6 +199,44 @@ window.addEventListener("load", function(evt) {
 		time:((new Date()).getTime()-diffTime)
 	};
 	ws.send(JSON.stringify(sendData));
+        return false;
+    };
+    var stopTimeout;
+    document.getElementById("canvas").onclick = function(evt) {
+        if (!ws) {
+            return false;
+        }
+	clearTimeout(stopTimeout);
+	var myObject = simulation.getObject(myUuid)
+	var originX = parseInt(myObject.Position/10000,10);
+	var originY = myObject.Position-originX*10000;
+	var mouseX = evt.x;
+	var mouseY = evt.y;
+	var diagonal = Math.sqrt(Math.pow(mouseX-originX,2)+Math.pow(mouseY-originY,2))
+	var radian = (mouseX>=originX?1:-1)*Math.acos(-1*(mouseY-originY)/diagonal)
+	myObject.Direction = Math.round(radian*100)/100
+	simulation.setObject(myUuid, myObject)
+        print("SEND: move with mouse");
+        var sendData = {
+		actionType:'move',
+		value:{
+			Direction:Math.round(radian*100)/100,
+			Speed:3
+		},
+		time:((new Date()).getTime()-diffTime)
+	};
+	ws.send(JSON.stringify(sendData));
+	stopTimeout = setTimeout(function(){
+		var sendData = {
+			actionType:'move',
+			value:{
+				Direction:Math.round(radian*100)/100,
+				Speed:0
+			},
+			time:((new Date()).getTime()-diffTime)
+		};
+		ws.send(JSON.stringify(sendData));
+	}, diagonal/3*100)
         return false;
     };
 });
