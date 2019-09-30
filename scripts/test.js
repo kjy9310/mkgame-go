@@ -8,6 +8,9 @@ window.addEventListener("load", function(evt) {
 	function setObjects(objs) {
 		Objects = objs;
 	}
+	function getObjects(){
+		return Objects
+	}
 	function setObject(uuid, obj){
 		Objects[Objects.findIndex(function(element){return element.Uuid==uuid})]=obj;
 	}
@@ -35,13 +38,14 @@ window.addEventListener("load", function(evt) {
 		}
 	}
 	
-	return {setObject:setObject, getObject:getObject, setObjects:setObjects, drawCanvas:drawCanvas}
+	return {getObjects:getObjects,setObject:setObject, getObject:getObject, setObjects:setObjects, drawCanvas:drawCanvas}
     };
     var simulation = canvasControl();
     var simulatingInterval
     var output = document.getElementById("output");
     var type = document.getElementById("type");
     var input = document.getElementById("input");
+    var statusSpan = document.getElementById("status");
     var ws;
     var myUuid;
     var pingFunc;
@@ -81,7 +85,10 @@ window.addEventListener("load", function(evt) {
 		    diffTime = pingSent - serverTime;
 		    break;
 		case 'status':
-		    simulation.setObjects(Object.values(jsonData.Data.Objects.start));
+		    simulation.setObjects(Object.values(jsonData.Data.Maps.start.Objects));
+		    statusSpan.innerHTML = Object.values(jsonData.Data.Maps.start.Objects).map(function(object){
+		    	return "uuid : "+object.Uuid+"<br/> Ap/Dp/Hp : "+object.Ap+"/"+object.Dp+"/"+object.Hp+" pos : "+object.Position+"<br/>"
+		    }).join("<br/>");
 		    break;
 		case 'move':
 		    var targetObj = simulation.getObject(jsonData.Uuid)
@@ -210,8 +217,29 @@ window.addEventListener("load", function(evt) {
 	var myObject = simulation.getObject(myUuid)
 	var originX = parseInt(myObject.Position/10000,10);
 	var originY = myObject.Position-originX*10000;
-	var mouseX = evt.x;
-	var mouseY = evt.y;
+	var mouseX = evt.offsetX;
+	var mouseY = evt.offsetY;
+	var simulationObjects = simulation.getObjects()
+	for(var index in simulationObjects){
+		var targetObject = simulationObjects[index]
+		if (myUuid==targetObject.Uuid){
+			break
+		}
+		var x = parseInt(targetObject.Position/10000);
+		var y = parseInt(targetObject.Position%10000);
+		console.log("object:",x,y)
+		if(mouseX>=x && mouseX<=x+10 && mouseY>=y && mouseY<=y+10){
+			var sendData = {
+				actionType:'attack',
+				value:{
+					Target:targetObject.Uuid,
+				},
+				time:((new Date()).getTime()-diffTime)
+			};
+			ws.send(JSON.stringify(sendData));
+			return
+		}
+	}
 	var diagonal = Math.sqrt(Math.pow(mouseX-originX,2)+Math.pow(mouseY-originY,2))
 	var radian = (mouseX>=originX?1:-1)*Math.acos(-1*(mouseY-originY)/diagonal)
 	myObject.Direction = Math.round(radian*100)/100
@@ -237,6 +265,7 @@ window.addEventListener("load", function(evt) {
 		};
 		ws.send(JSON.stringify(sendData));
 	}, diagonal/3*100)
+
         return false;
     };
 });

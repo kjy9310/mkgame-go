@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/websocket"
 	"time"
 	"encoding/json"
-	"sync"
 	"github.com/google/uuid"
 )
 
@@ -16,14 +15,6 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 	maxMessageSize = 1024 * 1024
 )
-
-type Client struct {
-	ws *websocket.Conn
-	send chan []byte
-	mu	sync.Mutex
-	Map	string
-	User Object
-}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  maxMessageSize,
@@ -55,6 +46,7 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	// c.User.Speed = 1.0
 	c.Map = "start"
 	c.User.Position = 5000500
+	c.User.Ap = 10
 	AHub.Register <- c
 
 	go c.writePump()

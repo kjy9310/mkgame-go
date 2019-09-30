@@ -12,46 +12,20 @@ var AHub = Hub{
 	Receive:   make(chan wsRequest),
 	Register:    make(chan *Client),
 	Unregister:  make(chan *Client),
-	Clients:	 make(map[*Client]bool),
+	Clients:	 make(map[string]*Client),
 	Inputqueues:	make([]wsResponse,0),
 	LastQueSent: 0,
-	Maps: make(map[string]Map),
-	Objects : make(map[string]map[int]*Object),
+	Maps: make(map[string]*Map),
 }
 
 
 var packetPeriod = 100 * time.Millisecond
 
-type Hub struct {
-	Clients map[*Client]bool
-	Receive chan wsRequest
-	Register chan *Client
-	Unregister chan *Client
-	Inputqueues []wsResponse
-	LastQueSent int
-	serverStatus wsResponse
-	Maps	map[string]Map
-	Objects map[string]map[int]*Object
-}
-
-type wsResponse struct {
-	Time int
-	Action string
-	Data interface{}
-	Uuid string
-}
-
-type wsRequest struct {
-	ActionType string		`json:"actionType"`
-	Value interface{}		`json:"value"`
-	Time int			`json:"time"`
-	Uuid string
-}
-
 func (h *Hub) loadMaps(){
-	emptyObject := make(map[int]*Object)
-	h.Maps = map[string]Map{"start":Map{}}
-	h.Objects = map[string]map[int]*Object{"start":emptyObject}
+	objects := make(map[int]*Object)
+	h.Maps = make(map[string]*Map)
+	h.Maps["start"] = &Map{Uuid:"start", Objects:objects}
+	h.Maps["start"].ObjectGenerator()
 }
 
 func (h *Hub) Run() {
@@ -62,17 +36,17 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case c := <-h.Register:
-			h.Clients[c] = true
-			h.Objects[c.Map][c.User.Position]=&c.User
+			h.Clients[c.User.Uuid] = c
+			h.Maps[c.Map].Objects[c.User.Position]=&c.User
 			break
 
 		case c := <-h.Unregister:
-			_, ok := h.Clients[c]
-			if _,exist := h.Objects[c.Map][c.User.Position]; exist {
-				delete(h.Objects[c.Map],c.User.Position)
+			_, ok := h.Clients[c.User.Uuid]
+			if _,exist := h.Maps[c.Map].Objects[c.User.Position]; exist {
+				delete(h.Maps[c.Map].Objects,c.User.Position)
 			}
 			if ok {
-				delete(h.Clients, c)
+				delete(h.Clients, c.User.Uuid)
 				close(c.send)
 			}
 			break
@@ -103,7 +77,7 @@ func (h *Hub) Run() {
 				h.serverStatus = wsResponse{
 					Action : "status",
 					Time : int(time.Now().UnixNano() / int64(time.Millisecond)),
-					Data : map[string]interface{}{"Maps":h.Maps,"Objects":h.Objects},
+					Data : map[string]interface{}{"Maps":h.Maps},
 				}
 				stringStatus, err := json.Marshal(h.serverStatus)
 				if err != nil {
@@ -133,13 +107,13 @@ func (h *Hub) stackReceivedInfo(singleRequest wsRequest){
 }
 
 func (h *Hub) broadcastMessage(message []byte) {
-	for c := range h.Clients {
+	for _, c := range h.Clients {
 		select {
 		case c.send <- message:
 			break
 		default:
 			close(c.send)
-			delete(h.Clients, c)
+			delete(h.Clients, c.User.Uuid)
 		}
 	}
 }

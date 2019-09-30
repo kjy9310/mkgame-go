@@ -5,39 +5,66 @@ import (
 	"math"
 )
 
-type Object struct {
-	Uuid string
-// position : 4 digit each  xxxxyyyy 8digit int
-	Position int
-	Direction float64
-	Speed float64
-	Durability int
+func (h *Hub) CutObjectsWithRadius(o *Object, mapName string, radius int) map[int]*Object {
+	newObjects := make(map[int]*Object)
+	x,y :=getCoordinateFromPosition(o.Position)
+	xMin := (int(x)-radius)*10000
+	xMax := (int(x)+radius)*10000
+	yMin := int(y)-radius
+	yMax := int(y)+radius
+	for position, object := range h.Maps[mapName].Objects {
+		if (position > xMin && position < xMax){
+			objectY := position%10000
+			if (objectY > yMin && objectY < yMax){
+				newObjects[position]=object
+			}
+		}
+	}
+	return newObjects
 }
 
-type Map struct {
-	Grid [][]Field
-	Uuid string
-}
-
-type Field struct {
-	Type string
+func (h *Hub) GetObjectWithUuid(uuid string, mapName string) *Object {
+	for _, object := range h.Maps[mapName].Objects {
+		if object.Uuid == uuid{
+			return object
+		}
+	}
+	return nil
 }
 
 func (h *Hub) Calculate(sortedQue []wsResponse) {
 	queMove4Uuid := map[string]wsResponse{}
-	log.Println("Calculate : ", sortedQue)
 	for _, que := range(sortedQue){
 		switch que.Action {
 		case "move":
 			queMove4Uuid[que.Uuid]=que
+		case "attack":
+			attackData := que.Data.(map[string]interface{})
+			client := h.Clients[que.Uuid]
+			if client.Cool > 0{
+				continue
+			}
+			attacker := client.User
+			log.Println("attacker :",attacker , " attackTarget : ", attackData)
+			if (attackData["Target"]==nil){
+				continue
+			}
+			attackTargetUuid := attackData["Target"].(string)
+			target := h.GetObjectWithUuid(attackTargetUuid, client.Map)
+			if ((int(math.Abs(float64(target.Position/10000 - attacker.Position/10000)))<50) && (int(math.Abs(float64(target.Position%10000 - attacker.Position%10000)))<50)) {
+				client.Cool = 10
+				target.Hp = target.Hp - attacker.Ap - target.Dp
+			}
 		}
 	}
 	lastQueSent := h.LastQueSent
-	for client, _ := range(h.Clients) {
+	for _, client := range(h.Clients) {
 		x, y := getCoordinateFromPosition(client.User.Position)
-		log.Println("original x,y : ", x, y)
 		if lastestMove, exist := queMove4Uuid[client.User.Uuid]; exist {
 			moveData := lastestMove.Data.(map[string]interface{})
+			if (moveData["Direction"]==nil || moveData["Speed"]==nil){
+				continue
+			}
 			client.User.Direction = moveData["Direction"].(float64)
 			client.User.Speed = moveData["Speed"].(float64)
 			moveBeforeAction := float64(lastestMove.Time - lastQueSent)/100
@@ -46,16 +73,13 @@ func (h *Hub) Calculate(sortedQue []wsResponse) {
 			moveAfterAction := (float64(100) - moveBeforeAction)/100
 			x+=moveAfterAction*client.User.Speed*math.Sin(client.User.Direction)
 			y+=-1*moveAfterAction*client.User.Speed*math.Cos(client.User.Direction)
-			log.Println("xy inside IF",x,y)
 		} else {
-			log.Println("contiues movement", client.User.Direction)
 			x+=client.User.Speed*math.Sin(client.User.Direction)
 			y+=-1*client.User.Speed*math.Cos(client.User.Direction)
-			log.Println("xy inside IF",x,y)
 		}
 		newPosition := getPositionFromCoordinate(math.Round(x),math.Round(y))
-		log.Println("movement done :", x, y)
 		client.User.move(newPosition, client.Map, h)
+		client.Cool -= 1
 	}
 }
 
@@ -82,11 +106,21 @@ func (o *Object) move (position int, mapName string, hub *Hub) {
 		nY=1
 	}
 	newPosition := getPositionFromCoordinate(nX,nY)
-	if _, exist := hub.Objects[mapName][newPosition]; exist{
+	if _, exist := hub.Maps[mapName].Objects[newPosition]; exist{
 		return
 	} else {
-		delete(hub.Objects[mapName], o.Position)
+		delete(hub.Maps[mapName].Objects, o.Position)
 		o.Position = newPosition
-		hub.Objects[mapName][o.Position] = o
+		hub.Maps[mapName].Objects[o.Position] = o
+	}
+}
+
+func (m *Map) ObjectGenerator(){
+	m.Objects[4000400] = &Object{
+		Uuid: "tree1",
+		Direction: 0,
+		Position: 4000400,
+		Dp:5,
+		Hp:10,
 	}
 }
