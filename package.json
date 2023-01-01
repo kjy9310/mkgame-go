@@ -21,9 +21,9 @@
   "homepage": "https://github.com/kjy9310/mkgame-go#readme",
   "dependencies": {
     "uglifyjs-webpack-plugin": "^2.1.1",
-    "webpack": "^4.29.1"
+    "webpack": "^5.75.0"
   },
   "devDependencies": {
-    "webpack-cli": "^3.2.3"
+    "webpack-cli": "^5.0.1"
   }
 }
